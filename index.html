@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Ball: Villain Destroyer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #2d1b69 100%);
+            border: 4px solid #ff6b6b;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        }
+
+        .game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #ff6b6b;
+        }
+
+        .score-panel div {
+            margin-bottom: 5px;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            pointer-events: all;
+            background: rgba(0,0,0,0.8);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ff6b6b;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .start-screen h1 {
+            font-size: 38px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            color: #ff6b6b;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .start-screen p {
+            font-size: 16px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            margin: 10px;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.4);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            pointer-events: all;
+            background: rgba(139, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            color: #ff0000;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.9;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+            border: 1px solid #ff6b6b;
+        }
+
+        .ammo-bar {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .ammo-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s ease;
+        }
+
+        .ammo-text {
+            position: absolute;
+            bottom: 105px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas class="game-canvas" id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="score-panel">
+                <div>Score: <span id="scoreValue">0</span></div>
+                <div>Killed: <span id="killCount">0</span></div>
+                <div>Best: <span id="highScoreValue">0</span></div>
+            </div>
+            
+            <div class="start-screen" id="startScreen">
+                <h1>🦸 VILLAIN DESTROYER 🦸</h1>
+                <p>The city is under attack by terrifying villains!</p>
+                <p>🎯 <strong>CLICK</strong> to shoot bullets and destroy them!</p>
+                <p>⬆️ <strong>SPACE</strong> to fly up and dodge attacks!</p>
+                <p>💀 Watch out - they're coming for you!</p>
+                <button class="start-btn" onclick="startGame()">SAVE THE CITY</button>
+            </div>
+            
+            <div class="game-over" id="gameOverScreen">
+                <h2>💀 THE VILLAINS WON! 💀</h2>
+                <p>The city has fallen to darkness...</p>
+                <p>Score: <span id="finalScore">0</span></p>
+                <p>Villains Destroyed: <span id="finalKills">0</span></p>
+                <button class="start-btn" onclick="resetGame()">FIGHT AGAIN</button>
+            </div>
+            
+            <div class="ammo-text">ENERGY</div>
+            <div class="ammo-bar">
+                <div class="ammo-fill" id="ammoFill"></div>
+            </div>
+            
+            <div class="instructions">
+                CLICK to shoot • SPACE to fly • Destroy the scary villains!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameState = 'start';
+        let score = 0;
+        let killCount = 0;
+        let highScore = 0;
+        
+        // Hero ball properties
+        const hero = {
+            x: 120,
+            y: 300,
+            radius: 25,
+            velocity: 0,
+            gravity: 0.6,
+            bounce: -10
+        };
+        
+        // Bullets
+        const bullets = [];
+        const maxAmmo = 100;
+        let ammo = maxAmmo;
+        let ammoRegenTimer = 0;
+        
+        // Scary villains
+        const villains = [];
+        const scaryVillains = [
+            { 
+                emoji: '💀', 
+                name: 'Death Skull', 
+                color: '#8B0000', 
+                size: 45,
+                health: 1,
+                points: 10,
+                speed: 2
+            },
+            { 
+                emoji: '👹', 
+                name: 'Demon', 
+                color: '#DC143C', 
+                size: 50,
+                health: 2,
+                points: 20,
+                speed: 1.5
+            },
+            { 
+                emoji: '🤖', 
+                name: 'Evil Robot', 
+                color: '#2F4F4F', 
+                size: 48,
+                health: 3,
+                points: 30,
+                speed: 1.8
+            },
+            { 
+                emoji: '👾', 
+                name: 'Alien Monster', 
+                color: '#4B0082', 
+                size: 46,
+                health: 2,
+                points: 25,
+                speed: 2.2
+            },
+            { 
+                emoji: '🦴', 
+                name: 'Skeleton', 
+                color: '#696969', 
+                size: 44,
+                health: 1,
+                points: 15,
+                speed: 2.5
+            },
+            { 
+                emoji: '🕸️', 
+                name: 'Web Monster', 
+                color: '#800080', 
+                size: 42,
+                health: 1,
+                points: 12,
+                speed: 1.7
+            }
+        ];
+        
+        let obstacleTimer = 0;
+        let gameSpeed = 2;
+        let difficultyTimer = 0;
+        
+        // Particle effects
+        const particles = [];
+        
+        // Background elements
+        const stars = [];
+        
+        // Initialize stars
+        function initStars() {
+            for (let i = 0; i < 50; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    twinkle: Math.random() * 0.02 + 0.01
+                });
+            }
+        }
+        
+        // Draw background
+        function drawBackground() {
+            // Dark space gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0f0f23');
+            gradient.addColorStop(0.5, '#1a1a2e');
+            gradient.addColorStop(1, '#2d1b69');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Twinkling stars
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                const opacity = 0.5 + Math.sin(Date.now() * star.twinkle) * 0.3;
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.fill();
+            });
+            
+            // City silhouette
+            ctx.fillStyle = '#000';
+            for (let i = 0; i < canvas.width; i += 60) {
+                const height = Math.random() * 100 + 50;
+                ctx.fillRect(i, canvas.height - height, 60, height);
+            }
+        }
+        
+        // Draw hero
+        function drawHero() {
+            // Hero glow
+            ctx.beginPath();
+            ctx.arc(hero.x, hero.y, hero.radius + 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 107, 107, 0.3)';
+            ctx.fill();
+            
+            // Hero cape
+            ctx.beginPath();
+            ctx.arc(hero.x - 18, hero.y, hero.radius * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fill();
+            
+            // Hero body
+            const heroGradient = ctx.createRadialGradient(
+                hero.x - 5, hero.y - 5, 0, 
+                hero.x, hero.y, hero.radius
+            );
+            heroGradient.addColorStop(0, '#4ecdc4');
+            heroGradient.addColorStop(1, '#44a08d');
+            
+            ctx.beginPath();
+            ctx.arc(hero.x, hero.y, hero.radius, 0, Math.PI * 2);
+            ctx.fillStyle = heroGradient;
+            ctx.fill();
+            
+            // Hero face
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.fillText('🦸', hero.x, hero.y + 7);
+        }
+        
+        // Draw bullets
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                // Bullet trail
+                ctx.beginPath();
+                ctx.arc(bullet.x - 10, bullet.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                ctx.fill();
+                
+                // Main bullet
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffd93d';
+                ctx.fill();
+                
+                // Bullet glow
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 217, 61, 0.3)';
+                ctx.fill();
+            });
+        }
+        
+        // Draw villains
+        function drawVillains() {
+            villains.forEach(villain => {
+                // Villain menacing aura
+                ctx.beginPath();
+                ctx.arc(villain.x, villain.y, villain.size / 2 + 15, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(139, 0, 0, 0.3)';
+                ctx.fill();
+                
+                // Villain shadow
+                ctx.beginPath();
+                ctx.arc(villain.x + 5, villain.y + 5, villain.size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fill();
+                
+                // Villain body
+                ctx.beginPath();
+                ctx.arc(villain.x, villain.y, villain.size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = villain.color;
+                ctx.fill();
+                
+                // Health indicator
+                if (villain.health > 1) {
+                    ctx.fillStyle = '#ff0000';
+                    for (let i = 0; i < villain.health; i++) {
+                        ctx.fillRect(villain.x - 15 + i * 8, villain.y - villain.size / 2 - 15, 6, 8);
+                    }
+                }
+                
+                // Villain emoji
+                ctx.font = `${villain.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(villain.emoji, villain.x, villain.y + villain.size / 6);
+                
+                // Menacing red glow
+                ctx.beginPath();
+                ctx.arc(villain.x, villain.y, villain.size / 2 + 8, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            });
+        }
+        
+        // Draw particles
+        function drawParticles() {
+            particles.forEach((particle, index) => {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${particle.color}, ${particle.opacity})`;
+                ctx.fill();
+                
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.opacity -= 0.02;
+                particle.size *= 0.98;
+                
+                if (particle.opacity <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        
+        // Create explosion
+        function createExplosion(x, y) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 6 + 3,
+                    opacity: 1,
+                    color: `255, ${Math.random() * 100 + 100}, 0`
+                });
+            }
+        }
+        
+        // Create villain
+        function createVillain() {
+            const type = scaryVillains[Math.floor(Math.random() * scaryVillains.length)];
+            const minY = 80;
+            const maxY = canvas.height - 100;
+            
+            villains.push({
+                x: canvas.width + 50,
+                y: Math.random() * (maxY - minY) + minY,
+                emoji: type.emoji,
+                name: type.name,
+                color: type.color,
+                size: type.size,
+                health: type.health,
+                maxHealth: type.health,
+                points: type.points,
+                speed: type.speed,
+                passed: false
+            });
+        }
+        
+        // Shoot bullet
+        function shootBullet() {
+            if (ammo > 0) {
+                bullets.push({
+                    x: hero.x + hero.radius,
+                    y: hero.y,
+                    speed: 8
+                });
+                ammo -= 5;
+                updateAmmoBar();
+            }
+        }
+        
+        // Update ammo bar
+        function updateAmmoBar() {
+            const ammoPercent = (ammo / maxAmmo) * 100;
+            document.getElementById('ammoFill').style.width = ammoPercent + '%';
+        }
+        
+        // Update game
+        function updateGame() {
+            if (gameState !== 'playing') return;
+            
+            // Update hero
+            hero.velocity += hero.gravity;
+            hero.y += hero.velocity;
+            
+            // Keep hero in bounds
+            if (hero.y - hero.radius < 0) {
+                hero.y = hero.radius;
+                hero.velocity = 0;
+            }
+            if (hero.y + hero.radius > canvas.height) {
+                gameOver();
+            }
+            
+            // Update bullets
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.speed;
+                if (bullet.x > canvas.width) {
+                    bullets.splice(index, 1);
+                }
+            });
+            
+            // Update villains
+            villains.forEach((villain, index) => {
+                villain.x -= villain.speed;
+                
+                // Check if hero passed villain
+                if (!villain.passed && villain.x < hero.x) {
+                    villain.passed = true;
+                    score += 5;
+                    document.getElementById('scoreValue').textContent = score;
+                }
+                
+                // Remove off-screen villains
+                if (villain.x < -villain.size) {
+                    villains.splice(index, 1);
+                }
+            });
+            
+            // Check bullet-villain collisions
+            bullets.forEach((bullet, bulletIndex) => {
+                villains.forEach((villain, villainIndex) => {
+                    const distance = Math.sqrt(
+                        Math.pow(bullet.x - villain.x, 2) + 
+                        Math.pow(bullet.y - villain.y, 2)
+                    );
+                    
+                    if (distance < 4 + villain.size / 2) {
+                        bullets.splice(bulletIndex, 1);
+                        villain.health--;
+                        
+                        if (villain.health <= 0) {
+                            createExplosion(villain.x, villain.y);
+                            score += villain.points;
+                            killCount++;
+                            document.getElementById('scoreValue').textContent = score;
+                            document.getElementById('killCount').textContent = killCount;
+                            villains.splice(villainIndex, 1);
+                        }
+                    }
+                });
+            });
+            
+            // Create new villains
+            obstacleTimer++;
+            if (obstacleTimer > 120 - Math.min(killCount * 2, 60)) {
+                createVillain();
+                obstacleTimer = 0;
+            }
+            
+            // Regenerate ammo
+            ammoRegenTimer++;
+            if (ammoRegenTimer > 10 && ammo < maxAmmo) {
+                ammo += 1;
+                ammoRegenTimer = 0;
+                updateAmmoBar();
+            }
+            
+            // Increase difficulty
+            difficultyTimer++;
+            if (difficultyTimer > 1800) { // Every 30 seconds
+                gameSpeed += 0.2;
+                difficultyTimer = 0;
+            }
+            
+            // Check hero-villain collisions
+            checkCollisions();
+        }
+        
+        // Check collisions
+        function checkCollisions() {
+            villains.forEach(villain => {
+                const distance = Math.sqrt(
+                    Math.pow(hero.x - villain.x, 2) + 
+                    Math.pow(hero.y - villain.y, 2)
+                );
+                
+                if (distance < hero.radius + villain.size / 2 - 8) {
+                    gameOver();
+                }
+            });
+        }
+        
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalKills').textContent = killCount;
+            document.getElementById('gameOverScreen').style.display = 'block';
+            
+            if (score > highScore) {
+                highScore = score;
+                document.getElementById('highScoreValue').textContent = highScore;
+            }
+        }
+        
+        // Make hero fly
+        function fly() {
+            if (gameState === 'playing') {
+                hero.velocity = hero.bounce;
+            }
+        }
+        
+        // Start game
+        function startGame() {
+            gameState = 'playing';
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+        }
+        
+        // Reset game
+        function resetGame() {
+            gameState = 'start';
+            score = 0;
+            killCount = 0;
+            gameSpeed = 2;
+            obstacleTimer = 0;
+            difficultyTimer = 0;
+            ammo = maxAmmo;
+            hero.x = 120;
+            hero.y = 300;
+            hero.velocity = 0;
+            villains.length = 0;
+            bullets.length = 0;
+            particles.length = 0;
+            
+            document.getElementById('scoreValue').textContent = '0';
+            document.getElementById('killCount').textContent = '0';
+            document.getElementById('startScreen').style.display = 'block';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            updateAmmoBar();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            drawParticles();
+            drawVillains();
+            drawBullets();
+            drawHero();
+            updateGame();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                fly();
+            }
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (gameState === 'playing') {
+                shootBullet();
+            }
+        });
+        
+        // Initialize and start
+        initStars();
+        updateAmmoBar();
+        gameLoop();
+    </script>
+</body>
+</html>
